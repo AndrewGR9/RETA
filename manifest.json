@@ -1,0 +1,10 @@
+{
+  "name": "Reta",
+  "short_name": "Reta",
+  "description": "Control de pagos para la reta.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f1f6f3",
+  "theme_color": "#0b5d3b",
+  "lang": "es-MX"
+}

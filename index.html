@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b5d3b">
+  <meta name="description" content="Control de pagos para la reta.">
+  <link rel="manifest" href="manifest.json">
+  <title>⚽ Reta</title>
+  <style>
+    :root { color-scheme: light; --green:#087443; --dark:#063d29; --bg:#f1f6f3; --red:#c83a3a; }
+    * { box-sizing:border-box } body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:#17231d }
+    header { background:linear-gradient(135deg,var(--dark),var(--green)); color:white; padding:24px 18px 20px; box-shadow:0 2px 8px #0003 }
+    h1 { font-size:1.7rem; margin:0 0 14px } .name-row { display:flex; gap:8px } input,button { font:inherit; border-radius:10px; border:0; padding:12px }
+    input { width:100%; border:1px solid #c9d8ce; background:#fff } .name-row input { flex:1 } button { cursor:pointer; font-weight:700; background:var(--green); color:#fff }
+    main { max-width:680px; margin:auto; padding:18px } .card { background:#fff; border-radius:15px; padding:16px; margin-bottom:16px; box-shadow:0 2px 9px #163c2614 }
+    h2 { font-size:1.05rem; margin:0 0 10px } p { margin:5px 0 12px; color:#506057; font-size:.92rem } .add { display:flex; gap:8px } .add input{ flex:1 }
+    .list { display:grid; gap:9px; margin-top:14px } .player { display:flex; align-items:center; gap:10px; border:1px solid #e0e9e3; border-radius:12px; padding:11px }
+    .player label { flex:1; font-weight:650; cursor:pointer } .delete { background:transparent; color:#9c332d; padding:4px 7px; font-size:1.1rem }
+    .counter { display:inline-block; font-weight:700; color:var(--green) }.hidden { display:none!important }.pay { width:100%; text-align:left; padding:15px; font-size:1.05rem; background:#fff; color:#18271e; border:1px solid #dce7df }
+    .pay.debe { border-left:7px solid var(--red) }.pay.pagado { border-left:7px solid #159253; background:#edf9f1; color:#176138 }.status { font-size:.78rem; float:right; font-weight:800 }
+    .actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap }.secondary { background:#e7eee9; color:#254334 }.danger { background:#a93434 }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚽ <span id="title">Reta</span></h1>
+    <div class="name-row"><input id="retaName" aria-label="Nombre de la reta" placeholder="Nombre de la reta"><button id="saveName">Guardar</button></div>
+  </header>
+  <main>
+    <section class="card" id="setup">
+      <h2>¿Quiénes juegan hoy?</h2><p>Selecciona exactamente 14 jugadores. Después podrás marcar sus pagos con un toque.</p>
+      <div class="add"><input id="newPlayer" placeholder="Agregar jugador"><button id="addPlayer">Agregar</button></div>
+      <div class="list" id="roster"></div>
+      <div class="actions"><span class="counter" id="counter">0 de 14 seleccionados</span><button id="start" disabled>Empezar reta</button></div>
+    </section>
+    <section class="card hidden" id="game">
+      <h2 id="gameHeading">Pagos</h2><p>Toca a un jugador para alternar entre DEBE y PAGADO.</p>
+      <div class="list" id="payments"></div>
+      <div class="actions"><button id="newGame" class="danger">Nueva reta</button><button id="editPlayers" class="secondary">Cambiar jugadores</button></div>
+    </section>
+  </main>
+  <script>
+    const defaults=['Andrés','Serch','Totti','Chuy','Suave','Vlady','Javo','Karmona','Richy','Sammy','Fran','Toñito','Chow','César','Ivan99','JR'];
+    const $=s=>document.querySelector(s); let players=JSON.parse(localStorage.getItem('retaPlayers')||'null')||defaults, selected=JSON.parse(localStorage.getItem('retaSelected')||'[]'), paid=JSON.parse(localStorage.getItem('retaPaid')||'{}');
+    const persist=()=>{localStorage.setItem('retaPlayers',JSON.stringify(players));localStorage.setItem('retaSelected',JSON.stringify(selected));localStorage.setItem('retaPaid',JSON.stringify(paid))};
+    function renderRoster(){ $('#roster').innerHTML=''; players.forEach((name,i)=>{let row=document.createElement('div');row.className='player'; let c=document.createElement('input');c.type='checkbox';c.checked=selected.includes(name);c.onchange=()=>{selected=c.checked?[...selected,name]:selected.filter(x=>x!==name);persist();renderRoster()};let label=document.createElement('label');label.textContent=name;label.htmlFor='p'+i;c.id='p'+i;let del=document.createElement('button');del.className='delete';del.textContent='×';del.title='Eliminar';del.onclick=()=>{players.splice(i,1);selected=selected.filter(x=>x!==name);delete paid[name];persist();renderRoster()};row.append(c,label,del);$('#roster').append(row)}); let ok=selected.length===14;$('#counter').textContent=`${selected.length} de 14 seleccionados`;$('#start').disabled=!ok }
+    function renderPayments(){ $('#gameHeading').textContent=$('#title').textContent+' — Pagos';$('#payments').innerHTML='';selected.forEach(name=>{let b=document.createElement('button');b.className='pay '+(paid[name]?'pagado':'debe');b.innerHTML=`${name}<span class="status">${paid[name]?'PAGADO':'DEBE'}</span>`;b.onclick=()=>{paid[name]=!paid[name]; if(navigator.vibrate)navigator.vibrate(45);persist();renderPayments()};$('#payments').append(b)}) }
+    function setName(){let n=$('#retaName').value.trim()||'Reta';localStorage.setItem('retaName',n);$('#title').textContent=n;$('#retaName').value=n;renderPayments()} let name=localStorage.getItem('retaName')||'Reta';$('#retaName').value=name;$('#title').textContent=name;
+    $('#saveName').onclick=setName; $('#addPlayer').onclick=()=>{let n=$('#newPlayer').value.trim();if(n&&!players.includes(n)){players.push(n);$('#newPlayer').value='';persist();renderRoster()}};$('#newPlayer').onkeydown=e=>{if(e.key==='Enter')$('#addPlayer').click()};
+    $('#start').onclick=()=>{if(selected.length===14){$('#setup').classList.add('hidden');$('#game').classList.remove('hidden');renderPayments()}};$('#editPlayers').onclick=()=>{$('#game').classList.add('hidden');$('#setup').classList.remove('hidden')};$('#newGame').onclick=()=>{paid={};persist();renderPayments()}; renderRoster();
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>
